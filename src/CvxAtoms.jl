@@ -30,3 +30,10 @@ abs(expr :: CvxExpr) =
     @elementwise(expr, :convex, signed, x -> Base.abs(x))
 
 
+norm(expr :: CvxExpr) = begin
+    (m, n) = size(expr)
+    args = [CvxArg(m, n)]
+    func = CvxFunction(1, 1, fill(:convex, (1,1)), args,
+                       signed, X -> Base.norm(X))
+    return Composition(func, [expr])
+end

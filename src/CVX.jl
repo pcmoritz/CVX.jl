@@ -1,5 +1,7 @@
 module CVX
 
-# package code goes here
+include("DCP.jl") # the convex programming ruleset
+include("CvxExpr.jl") # convex expressions
+include("CvxAtoms.jl") # the atom library
 
-end # module
+end

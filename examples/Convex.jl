@@ -12,3 +12,6 @@ CVX.curvature(g)
 
 x = CVX.Var(20,1,"x")
 CVX.curvature(2*x)
+
+
+

@@ -61,6 +61,15 @@ end
 
 +(first :: CvxExpr, second :: Real) = second + first
 
+.+(first :: Array{Float64, 2}, second :: CvxExpr) = begin
+    if Base.size(first) != size(second)
+        throw(ArgumentError(".+: Dimensions do not match"))
+    end
+    return CvxSum(CvxConst(first), second)
+end
+
+.+(first :: CvxExpr, second :: Array{Float64, 2}) = second .+ first
+
 type CvxProd <: CvxExpr
     first :: Array{Float64, 2}
     second :: CvxExpr
@@ -104,6 +113,44 @@ evaluate(expr :: CvxNeg, context :: Dict{ASCIIString, Float64}) =
     -evaluate(expr, context)
 
 -(expr :: CvxExpr) = CvxNeg(expr)
+
+.-(first :: CvxExpr, second :: Array{Float64, 2}) = first .+ (-second)
+.-(first :: Array{Float64, 2}, second :: CvxExpr) = first .+ (-second)
+
+type CvxMatMul <: CvxExpr
+    A :: Array{Float64, 2}
+    B :: CvxExpr
+end
+
+size(expr :: CvxMatMul) = size(expr.B)
+
+curvature(expr :: CvxMatMul) = begin
+    (k, l) = Base.size(expr.A)
+    (m, n) = size(expr.B)
+    @assert (l == m)
+    result = fill(:unknown, (k, n))
+    # convexity of the second matrix B is propagated by matrix
+    # multiplication: The j-th column of B influences convexity of the
+    # (i,j)-th entry of the result
+    C = curvature(expr.B)
+    for i = 1:k
+        for j = 1:n
+            curv = :affine
+            for k = 1:l
+                curv = plus(curv, multiply(expr.A[i,k],C[k,j]))
+            end
+            result[i,j]= curv
+        end
+    end
+    return result
+end
+
+*(first :: Array{Float64, 2}, second :: CvxExpr) = begin
+    if Base.size(first, 2) != size(second)[1]
+        throw(ArgumentError("*: Dimensions do not match"))
+    end
+    CvxMatMul(first, second)
+end
 
 type CvxArg
     rows :: Int
